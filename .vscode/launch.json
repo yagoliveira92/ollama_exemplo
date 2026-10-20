@@ -1,0 +1,56 @@
+{
+    // Use o IntelliSense para saber a respeito dos atributos possíveis.
+    // Passe o mouse para ver as descrições dos atributos existentes.
+    // Para obter mais informações, acesse: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "EdgeInspector (Debug - Dispositivo Selecionado)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "EdgeInspector (macOS Desktop)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "macos"
+        },
+        {
+            "name": "EdgeInspector (Android)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "android"
+        },
+        {
+            "name": "EdgeInspector (Chrome Web)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "chrome"
+        },
+        {
+            "name": "EdgeInspector (Profile Mode - macOS)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "deviceId": "macos",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "EdgeInspector (Release Mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "Testes Unitários (hybrid_architecture_test)",
+            "request": "launch",
+            "type": "dart",
+            "program": "test/hybrid_architecture_test.dart"
+        }
+    ]
+}
