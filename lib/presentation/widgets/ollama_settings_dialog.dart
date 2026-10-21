@@ -22,12 +22,17 @@ class _OllamaSettingsDialogState extends State<OllamaSettingsDialog> {
   late LocalEngineType _selectedEngine;
   late final TextEditingController _urlController;
   late final TextEditingController _modelController;
+  late final TextEditingController _downloadUrlController;
 
   final ModelManagerService _modelManager = ModelManagerService();
   bool _isCheckingOnDevice = true;
   bool _isOnDeviceInstalled = false;
   double? _onDeviceSizeMb;
   String _onDevicePath = '';
+
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
+  String? _downloadError;
 
   bool _isTestingOllama = false;
   bool? _ollamaTestResult;
@@ -43,6 +48,9 @@ class _OllamaSettingsDialogState extends State<OllamaSettingsDialog> {
     _selectedEngine = widget.router.activeLocalEngine;
     _urlController = TextEditingController(text: widget.router.localProvider.baseUrl);
     _modelController = TextEditingController(text: widget.router.localProvider.model);
+    _downloadUrlController = TextEditingController(
+      text: 'http://10.0.2.2:8080/gemma3-1b-it-int4.task',
+    );
 
     _checkOnDeviceModel();
     _loadOllamaModels();
@@ -52,6 +60,7 @@ class _OllamaSettingsDialogState extends State<OllamaSettingsDialog> {
   void dispose() {
     _urlController.dispose();
     _modelController.dispose();
+    _downloadUrlController.dispose();
     super.dispose();
   }
 
@@ -131,6 +140,39 @@ class _OllamaSettingsDialogState extends State<OllamaSettingsDialog> {
           _installedOllamaModels = models;
         }
       });
+    }
+  }
+
+  Future<void> _startDownloadModel() async {
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.0;
+      _downloadError = null;
+    });
+
+    try {
+      await _modelManager.downloadModelWithProgress(
+        downloadUrl: _downloadUrlController.text.trim(),
+        onProgress: (progress, received, total) {
+          if (mounted) {
+            setState(() {
+              _downloadProgress = progress;
+            });
+          }
+        },
+      );
+
+      if (mounted) {
+        setState(() => _isDownloading = false);
+        await _checkOnDeviceModel();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _downloadError = e.toString();
+        });
+      }
     }
   }
 
@@ -360,27 +402,73 @@ class _OllamaSettingsDialogState extends State<OllamaSettingsDialog> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                if (!_isOnDeviceInstalled) ...[
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.backgroundSurface,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppTheme.borderSubtle),
-                    ),
-                    child: const Text(
-                      'Para instalar no aparelho Android:\n'
-                      'adb push gemma-2b-it-gpu-int4.bin /sdcard/Android/data/com.example.ollama_exemplo/files/models/\n'
-                      '(Ou coloque o arquivo na pasta de documentos da aplicação).',
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 10,
-                        color: AppTheme.darkGraphite,
-                      ),
-                    ),
+                // Painel de Download ou Instalação do Modelo (Workshop)
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.backgroundSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.borderSubtle),
                   ),
-                  const SizedBox(height: 10),
-                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '📥 Download de Modelo On-Device (Workshop):',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.darkGraphite,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _downloadUrlController,
+                        decoration: InputDecoration(
+                          hintText: 'URL do modelo (.task ou .bin)',
+                          hintStyle: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          isDense: true,
+                        ),
+                        style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_isDownloading) ...[
+                        LinearProgressIndicator(
+                          value: _downloadProgress > 0 ? _downloadProgress : null,
+                          color: AppTheme.primaryEmerald,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Baixando: ${(_downloadProgress * 100).toStringAsFixed(1)}%',
+                          style: const TextStyle(fontSize: 10, color: AppTheme.primaryDark),
+                        ),
+                      ] else ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _startDownloadModel,
+                            icon: const Icon(Icons.cloud_download, size: 14),
+                            label: const Text('Baixar Modelo para o Celular', style: TextStyle(fontSize: 11)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryEmerald,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (_downloadError != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Erro: $_downloadError',
+                          style: const TextStyle(fontSize: 10, color: Colors.red),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
                 OutlinedButton.icon(
                   onPressed: _isTestingMediaPipe ? null : _testMediaPipe,
                   icon: _isTestingMediaPipe

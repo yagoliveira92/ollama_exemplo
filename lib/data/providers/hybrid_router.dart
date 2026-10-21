@@ -84,7 +84,11 @@ class HybridRouter implements IAgentProvider {
       );
     }
 
+    // =========================================================================
+    // [WORKSHOP - PARTE 4] ROTEADOR HÍBRIDO E FIREWALL COGNITIVO
+    // =========================================================================
     // 2. FIREWALL COGNITIVO ON-DEVICE (Detecção e Sanitização de PIIs)
+    // TODO: [WORKSHOP - PARTE 4.1] Executar o sanitizer para detectar CPFs, e-mails e nomes:
     final privacyReport = sanitizer.sanitize(rawText);
     final bool hasSensitivePii = privacyReport.hasPii;
 
@@ -94,8 +98,15 @@ class HybridRouter implements IAgentProvider {
 
     AgentExecutionResult result;
 
+    // TODO: [WORKSHOP - PARTE 4.2] Implementar as 4 Regras de Roteamento Inteligente:
+    // -------------------------------------------------------------------------
+    // Regra 1: Se estiver offline forçado (forceOfflineMode) -> Executar no Edge (_executeLocal)
+    // Regra 2: Se tiver PII e não for crítico (hasSensitivePii && !isComplex) -> Manter no Edge por privacidade estrita
+    // Regra 3: Se for simples/curto (!isComplex) -> Executar no Edge por custo zero e velocidade
+    // Regra 4: Caso contrário (complexo) -> Despachar para a Nuvem (_executeCloud) com o texto higienizado
+    // -------------------------------------------------------------------------
+
     if (forceOfflineMode) {
-      // Regra 1: Offline forçado -> Direto para Ollama Local
       result = await _executeLocal(
         payload: sanitizedPayload,
         privacyReport: privacyReport,
@@ -104,7 +115,6 @@ class HybridRouter implements IAgentProvider {
       metrics.localCount++;
       metrics.totalSavedUsd += cloudProvider.costPerRequest;
     } else if (hasSensitivePii && !isComplex) {
-      // Regra 2: Dados PII detectados e texto de complexidade moderada -> Mantém tudo local
       result = await _executeLocal(
         payload: sanitizedPayload,
         privacyReport: privacyReport,
@@ -113,7 +123,6 @@ class HybridRouter implements IAgentProvider {
       metrics.localCount++;
       metrics.totalSavedUsd += cloudProvider.costPerRequest;
     } else if (!isComplex) {
-      // Regra 3: Trivial (< 300 caracteres, sem traces críticos) -> Ollama Local (rápido e gratuito)
       result = await _executeLocal(
         payload: sanitizedPayload,
         privacyReport: privacyReport,
@@ -122,7 +131,6 @@ class HybridRouter implements IAgentProvider {
       metrics.localCount++;
       metrics.totalSavedUsd += cloudProvider.costPerRequest;
     } else {
-      // Regra 4: Complexo e com rede -> Nuvem (apenas com o texto previamente sanitizado!)
       result = await _executeCloud(
         sanitizedPayload: sanitizedPayload,
         privacyReport: privacyReport,

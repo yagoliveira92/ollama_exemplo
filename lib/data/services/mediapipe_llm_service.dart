@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_edge_ai/flutter_edge_ai.dart';
+// ignore: unused_import
 import 'package:flutter_edge_ai_mediapipe/flutter_edge_ai_mediapipe.dart';
 
 enum LlmEngineState {
@@ -24,6 +25,9 @@ class MediaPipeLlmService {
   String? get loadedModelPath => _loadedModelPath;
   String? get lastError => _lastError;
 
+  /// =========================================================================
+  /// [WORKSHOP - PARTE 2] INICIALIZAÇÃO DO MODELO ON-DEVICE NA GPU/NPU
+  /// =========================================================================
   /// Inicializa o modelo no dispositivo carregando os pesos na memória via flutter_edge_ai
   Future<bool> initialize({
     required String modelPath,
@@ -45,14 +49,15 @@ class MediaPipeLlmService {
         return false;
       }
 
-      // Detecção inteligente de tipo de arquivo (.task vs .bin)
+      // Detecção de tipo de arquivo e família do modelo
+      // ignore: unused_local_variable
       final effectiveFileType = fileType ??
           (modelPath.toLowerCase().endsWith('.task')
               ? ModelFileType.task
               : ModelFileType.binary);
 
-      // Detecção inteligente da família do modelo (Gemma vs Qwen vs Phi)
       final lowerPath = modelPath.toLowerCase();
+      // ignore: unused_local_variable
       final effectiveModelType = modelType ??
           (lowerPath.contains('qwen')
               ? ModelType.qwen
@@ -60,23 +65,22 @@ class MediaPipeLlmService {
                   ? ModelType.phi
                   : ModelType.gemmaIt);
 
-      // Garante que o motor MediaPipe está registrado
-      try {
-        await FlutterEdgeAi.initialize(
-          inferenceEngines: const [MediaPipeEngine()],
-        );
-      } catch (_) {
-        // Já pode ter sido inicializado no main()
-      }
+      // TODO: [WORKSHOP - PARTE 2.1] Registrar a engine nativa MediaPipe
+      // Dica:
+      // await FlutterEdgeAi.initialize(
+      //   inferenceEngines: const [MediaPipeEngine()],
+      // );
 
-      // Instalação/registro do modelo no runtime do flutter_edge_ai
-      await FlutterEdgeAi.installModel(
-        modelType: effectiveModelType,
-        fileType: effectiveFileType,
-      ).fromFile(file.path).install();
+      // TODO: [WORKSHOP - PARTE 2.2] Registrar o arquivo do modelo no runtime
+      // Dica:
+      // await FlutterEdgeAi.installModel(
+      //   modelType: effectiveModelType,
+      //   fileType: effectiveFileType,
+      // ).fromFile(file.path).install();
 
-      // Carrega a instância do modelo ativo na GPU/NPU
-      _activeModel = await FlutterEdgeAi.getActiveModel(maxTokens: maxTokens);
+      // TODO: [WORKSHOP - PARTE 2.3] Carregar a instância do modelo ativo na GPU/NPU
+      // Dica:
+      // _activeModel = await FlutterEdgeAi.getActiveModel(maxTokens: maxTokens);
 
       _loadedModelPath = modelPath;
       _state = LlmEngineState.ready;
@@ -94,6 +98,9 @@ class MediaPipeLlmService {
     return isReady;
   }
 
+  /// =========================================================================
+  /// [WORKSHOP - PARTE 2.4] EXECUÇÃO DA INFERÊNCIA NO DISPOSITIVO
+  /// =========================================================================
   /// Gera a resposta completa do modelo a partir de um prompt
   Future<String> generateResponse(
     String prompt, {
@@ -109,28 +116,26 @@ class MediaPipeLlmService {
     _state = LlmEngineState.generating;
 
     try {
-      final chat = await _activeModel!.createChat(
-        temperature: temperature,
-        topK: topK,
-      );
-
-      await chat.addQueryChunk(Message.text(text: prompt, isUser: true));
-      final response = await chat.generateChatResponse();
+      // TODO: [WORKSHOP - PARTE 2.4] Criar sessão de chat e gerar resposta
+      // 1. Criar o chat no modelo ativo com temperature e topK:
+      // final chat = await _activeModel!.createChat(
+      //   temperature: temperature,
+      //   topK: topK,
+      // );
+      //
+      // 2. Enviar a mensagem com o prompt:
+      // await chat.addQueryChunk(Message.text(text: prompt, isUser: true));
+      //
+      // 3. Aguardar a resposta:
+      // final response = await chat.generateChatResponse();
+      //
+      // 4. Extrair o texto do token retornado:
+      // final output = response is TextResponse ? response.token : response.toString();
 
       _state = LlmEngineState.ready;
 
-      String output = '';
-      if (response is TextResponse) {
-        output = response.token;
-      } else {
-        output = response.toString();
-      }
-
-      if (output.trim().isEmpty) {
-        throw StateError('O modelo retornou uma resposta vazia.');
-      }
-
-      return output;
+      // Retorno temporário enquanto os alunos implementam o trecho acima
+      return '{"incident_type": "Workshop", "severity": "Baixa", "recommended_action": "Complete o TODO 2.4", "execution_tasks": ["Completar código"], "summary": "Workshop TODO"}';
     } catch (e) {
       _state = LlmEngineState.ready;
       rethrow;

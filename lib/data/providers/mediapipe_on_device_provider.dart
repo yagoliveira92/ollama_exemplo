@@ -48,15 +48,19 @@ class MediaPipeOnDeviceProvider implements IAgentProvider {
       );
     }
 
+    // =========================================================================
+    // [WORKSHOP - PARTE 3.2] DISPARAR INFERÊNCIA E MONTAR RESULTADO
+    // =========================================================================
     // 2. Monta o prompt formatado com as tags oficiais do Gemma 2 Instruct
     final formattedPrompt = _buildGemmaPrompt(rawText);
 
     try {
-      // 3. Execução nativa On-Device via GPU/NPU com flutter_edge_ai
+      // TODO: [WORKSHOP - PARTE 3.2] Executar a inferência e tratar a resposta estruturada
+      // 1. Invocação nativa:
       final rawOutput = await llmService.generateResponse(formattedPrompt);
       stopwatch.stop();
 
-      // 4. Parse do JSON estruturado
+      // 2. Parse do JSON estruturado:
       final parsedJson = _cleanAndParseJson(rawOutput);
       final analysis = IncidentAnalysis.fromJson(parsedJson);
 
@@ -65,7 +69,7 @@ class MediaPipeOnDeviceProvider implements IAgentProvider {
         providerName: providerName,
         routeTarget: RouteTarget.localOllama, // Categoria local On-Device
         latencyMs: stopwatch.elapsedMilliseconds,
-        costUsd: 0.00, // Custo zero de nuvem
+        costUsd: 0.00, // Custo zero de nuvem!
         isCacheHit: false,
         privacyReport: PrivacyReport.clean(rawText),
         routeReason: 'Inferência On-Device 100% Nativa (FlutterEdgeAI + Gemma 2B via NPU/GPU)',
@@ -77,8 +81,20 @@ class MediaPipeOnDeviceProvider implements IAgentProvider {
     }
   }
 
-  /// Constrói o prompt com o template padrão do Gemma 2
+  /// =========================================================================
+  /// [WORKSHOP - PARTE 3.1] PROMPT ENGINEERING PARA MODELOS NA BORDA
+  /// =========================================================================
+  /// Constrói o prompt com o template padrão do Gemma 2 (`<start_of_turn>` / `<end_of_turn>`)
+  /// Modelos leves de Edge AI necessitam de instruções e limites de formato claros (JSON estrito).
   String _buildGemmaPrompt(String incidentText) {
+    // TODO: [WORKSHOP - PARTE 3.1] Escrever o template de prompt do Gemma
+    // Dica de formato:
+    // '''<start_of_turn>user
+    // Você é um Engenheiro de Confiabilidade de Sistemas (SRE) especializado em triagem de incidentes.
+    // Retorne EXCLUSIVAMENTE um JSON válido com: incident_type, severity, recommended_action, execution_tasks, summary.
+    // Incidente: $incidentText<end_of_turn>
+    // <start_of_turn>model
+    // '''
     return '''<start_of_turn>user
 Você é um Engenheiro de Confiabilidade de Sistemas (SRE) especializado em triagem e diagnóstico de incidentes.
 Analise o relatório e retorne EXCLUSIVAMENTE um objeto JSON válido (sem textos extras ou marcações de markdown fora do JSON) com as seguintes chaves:

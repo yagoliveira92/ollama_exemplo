@@ -135,4 +135,46 @@ class ModelManagerService {
     }
     return null;
   }
+
+  /// =========================================================================
+  /// [WORKSHOP - PARTE 1] DOWNLOAD E GESTÃO DO MODELO NO DISPOSITIVO
+  /// =========================================================================
+  /// Baixa o modelo da rede e grava em streaming diretamente na pasta privada da aplicação.
+  /// 
+  /// Desafio no Workshop:
+  /// 1. Obter o diretório de destino através de `getModelsDirectory()`.
+  /// 2. Abrir uma conexão HTTP Stream com a URL informada.
+  /// 3. Gravar os chunks de bytes em disco (`file.openWrite()`).
+  /// 4. Notificar o progresso percentual (0.0 a 1.0) via callback `onProgress`.
+  Future<String> downloadModelWithProgress({
+    required String downloadUrl,
+    String filename = defaultGemmaModelName,
+    void Function(double progress, int receivedBytes, int totalBytes)? onProgress,
+  }) async {
+    final modelsDir = await getModelsDirectory();
+    final destinationFile = File('${modelsDir.path}/$filename');
+
+    // TODO: [WORKSHOP - PARTE 1.1] Implementar o download via HttpClient/http stream
+    // Dica de implementação com HttpClient nativo do Dart:
+    //
+    // final client = HttpClient();
+    // final request = await client.getUrl(Uri.parse(downloadUrl));
+    // final response = await request.close();
+    // final totalBytes = response.contentLength;
+    // int receivedBytes = 0;
+    //
+    // final sink = destinationFile.openWrite();
+    // await for (final chunk in response) {
+    //   sink.add(chunk);
+    //   receivedBytes += chunk.length;
+    //   if (totalBytes > 0 && onProgress != null) {
+    //     onProgress(receivedBytes / totalBytes, receivedBytes, totalBytes);
+    //   }
+    // }
+    // await sink.flush();
+    // await sink.close();
+
+    // Retorna o caminho absoluto do arquivo salvo
+    return destinationFile.path;
+  }
 }
