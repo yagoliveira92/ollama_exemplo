@@ -8,6 +8,7 @@ class HeaderMetricsBar extends StatelessWidget {
   final ValueChanged<bool> onToggleOffline;
   final bool? isOllamaOnline;
   final bool isPinging;
+  final LocalEngineType activeEngine;
   final VoidCallback onPingOllama;
   final VoidCallback onOpenSettings;
 
@@ -18,6 +19,7 @@ class HeaderMetricsBar extends StatelessWidget {
     required this.onToggleOffline,
     required this.isOllamaOnline,
     required this.isPinging,
+    this.activeEngine = LocalEngineType.mediaPipeOnDevice,
     required this.onPingOllama,
     required this.onOpenSettings,
   });
@@ -267,32 +269,47 @@ class HeaderMetricsBar extends StatelessWidget {
   }
 
   Color get _statusBgColor {
+    if (activeEngine == LocalEngineType.mediaPipeOnDevice) {
+      return const Color(0xFFE0F2F1); // Teal suave
+    }
     if (isOllamaOnline == true) return const Color(0xFFE8F5E9);
     if (isOllamaOnline == false) return const Color(0xFFFFEBEE);
     return const Color(0xFFF5F5F5);
   }
 
   Color get _statusBorderColor {
+    if (activeEngine == LocalEngineType.mediaPipeOnDevice) {
+      return AppTheme.primaryEmerald;
+    }
     if (isOllamaOnline == true) return const Color(0xFFC8E6C9);
     if (isOllamaOnline == false) return const Color(0xFFFFCDD2);
     return AppTheme.borderSubtle;
   }
 
   Color get _statusDotColor {
+    if (activeEngine == LocalEngineType.mediaPipeOnDevice) {
+      return AppTheme.primaryEmerald;
+    }
     if (isOllamaOnline == true) return const Color(0xFF43A047);
     if (isOllamaOnline == false) return const Color(0xFFE53935);
     return Colors.grey;
   }
 
   Color get _statusTextColor {
+    if (activeEngine == LocalEngineType.mediaPipeOnDevice) {
+      return AppTheme.primaryDark;
+    }
     if (isOllamaOnline == true) return const Color(0xFF2E7D32);
     if (isOllamaOnline == false) return const Color(0xFFC62828);
     return AppTheme.darkGraphite;
   }
 
   String get _statusText {
+    if (activeEngine == LocalEngineType.mediaPipeOnDevice) {
+      return '⚡ Flutter Edge AI (Gemma 2B)';
+    }
     if (isPinging) return 'Testando Ollama...';
-    if (isOllamaOnline == true) return 'Ollama On-Device Online (11434)';
+    if (isOllamaOnline == true) return 'Ollama Server Online (11434)';
     if (isOllamaOnline == false) return 'Ollama Desconectado (Clique p/ ping)';
     return 'Status Ollama: Não verificado';
   }

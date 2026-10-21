@@ -193,10 +193,12 @@ class _EdgeInspectorScreenState extends State<EdgeInspectorScreen> {
     showDialog(
       context: context,
       builder: (ctx) => OllamaSettingsDialog(
-        localProvider: _router.localProvider,
+        router: _router,
         onSaved: () {
           setState(() {});
-          _pingOllama();
+          if (_router.activeLocalEngine == LocalEngineType.ollamaServer) {
+            _pingOllama();
+          }
         },
       ),
     );
@@ -270,6 +272,7 @@ class _EdgeInspectorScreenState extends State<EdgeInspectorScreen> {
                   HeaderMetricsBar(
                     metrics: _router.metrics,
                     isOfflineForced: _router.forceOfflineMode,
+                    activeEngine: _router.activeLocalEngine,
                     onToggleOffline: (val) {
                       setState(() {
                         _router.forceOfflineMode = val;

@@ -4,7 +4,13 @@ import '../../domain/models/agent_result.dart';
 import '../services/firewall_sanitizer.dart';
 import '../services/semantic_cache.dart';
 import 'cloud_agent_provider.dart';
+import 'mediapipe_on_device_provider.dart';
 import 'ollama_local_provider.dart';
+
+enum LocalEngineType {
+  mediaPipeOnDevice,
+  ollamaServer,
+}
 
 class CumulativeMetrics {
   double totalSavedUsd;
@@ -26,20 +32,25 @@ class CumulativeMetrics {
 
 class HybridRouter implements IAgentProvider {
   final OllamaLocalProvider localProvider;
+  final MediaPipeOnDeviceProvider mediaPipeProvider;
   final CloudAgentProvider cloudProvider;
   final FirewallSanitizer sanitizer;
   final SemanticCache semanticCache;
 
+  LocalEngineType activeLocalEngine;
   bool forceOfflineMode;
   final CumulativeMetrics metrics = CumulativeMetrics();
 
   HybridRouter({
     required this.localProvider,
     required this.cloudProvider,
+    MediaPipeOnDeviceProvider? mediaPipeProvider,
+    this.activeLocalEngine = LocalEngineType.mediaPipeOnDevice,
     FirewallSanitizer? sanitizer,
     SemanticCache? semanticCache,
     this.forceOfflineMode = false,
-  })  : sanitizer = sanitizer ?? FirewallSanitizer(),
+  })  : mediaPipeProvider = mediaPipeProvider ?? MediaPipeOnDeviceProvider(),
+        sanitizer = sanitizer ?? FirewallSanitizer(),
         semanticCache = semanticCache ?? SemanticCache();
 
   @override
@@ -162,8 +173,12 @@ class HybridRouter implements IAgentProvider {
     required PrivacyReport privacyReport,
     required String routeReason,
   }) async {
+    final isMediaPipe = activeLocalEngine == LocalEngineType.mediaPipeOnDevice;
+    final IAgentProvider chosenProvider =
+        isMediaPipe ? mediaPipeProvider : localProvider;
+
     try {
-      final execution = await localProvider.processIncident(payload);
+      final execution = await chosenProvider.processIncident(payload);
       return AgentExecutionResult(
         analysis: execution.analysis,
         providerName: execution.providerName,
@@ -175,8 +190,29 @@ class HybridRouter implements IAgentProvider {
         routeReason: routeReason,
         rawJson: execution.rawJson,
       );
-    } catch (e) {
-      // Se falhar o Ollama local e não estiver em offline forçado, tenta fallback seguro na nuvem com aviso
+    } catch (primaryError) {
+      // Se o MediaPipe falhar (ex: arquivo ainda não copiado), tenta Ollama como primeiro fallback local
+      if (isMediaPipe) {
+        try {
+          final ollamaExecution = await localProvider.processIncident(payload);
+          return AgentExecutionResult(
+            analysis: ollamaExecution.analysis,
+            providerName: '${ollamaExecution.providerName} (Fallback Local)',
+            routeTarget: RouteTarget.localOllama,
+            latencyMs: ollamaExecution.latencyMs,
+            costUsd: 0.00,
+            isCacheHit: false,
+            privacyReport: privacyReport,
+            routeReason:
+                'Fallback Local: MediaPipe indisponível ($primaryError), executado via Ollama',
+            rawJson: ollamaExecution.rawJson,
+          );
+        } catch (_) {
+          // Segue para fallback na nuvem se permitido
+        }
+      }
+
+      // Se falhar o processamento local e não estiver em offline forçado, tenta fallback seguro na nuvem com aviso
       if (!forceOfflineMode) {
         final cloudRes = await cloudProvider.processIncident(payload);
         return AgentExecutionResult(
@@ -187,7 +223,8 @@ class HybridRouter implements IAgentProvider {
           costUsd: cloudRes.costUsd,
           isCacheHit: false,
           privacyReport: privacyReport,
-          routeReason: 'Fallback Automático: Falha no Ollama Local ($e), requisitado à Nuvem',
+          routeReason:
+              'Fallback Automático: Falha local ($primaryError), requisitado à Nuvem',
           rawJson: cloudRes.rawJson,
         );
       }

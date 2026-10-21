@@ -18,11 +18,20 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_edge_ai/flutter_edge_ai.dart';
+import 'package:flutter_edge_ai_mediapipe/flutter_edge_ai_mediapipe.dart';
 import 'presentation/screens/edge_inspector_screen.dart';
 import 'presentation/theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await FlutterEdgeAi.initialize(
+      inferenceEngines: const [MediaPipeEngine()],
+    );
+  } catch (e) {
+    debugPrint('Aviso: FlutterEdgeAi inicializado em modo fallback: $e');
+  }
   runApp(const EdgeInspectorApp());
 }
 

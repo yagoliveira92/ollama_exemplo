@@ -9,7 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_edge_ai: ^2.5.0
+  flutter_edge_ai_mediapipe: ^1.2.3
   http: ^1.6.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
