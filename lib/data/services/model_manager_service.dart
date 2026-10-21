@@ -135,4 +135,66 @@ class ModelManagerService {
     }
     return null;
   }
+
+  /// =========================================================================
+  /// [GABARITO WORKSHOP - PARTE 1] DOWNLOAD DE MODELO ON-DEVICE COM PROGRESSO
+  /// =========================================================================
+  /// Baixa o modelo da rede via streaming HTTP e grava diretamente no disco privado.
+  /// 
+  /// Emite callbacks com percentual (0.0 a 1.0), bytes recebidos e total.
+  Future<String> downloadModelWithProgress({
+    required String downloadUrl,
+    String filename = defaultGemmaModelName,
+    void Function(double progress, int receivedBytes, int totalBytes)? onProgress,
+  }) async {
+    final modelsDir = await getModelsDirectory();
+    final destinationFile = File('${modelsDir.path}/$filename');
+    final tempFile = File('${modelsDir.path}/$filename.part');
+
+    final client = HttpClient();
+    client.autoUncompress = true;
+
+    try {
+      final uri = Uri.parse(downloadUrl);
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+
+      if (response.statusCode != HttpStatus.ok) {
+        throw HttpException(
+          'Falha no download (HTTP ${response.statusCode}): ${response.reasonPhrase}',
+          uri: uri,
+        );
+      }
+
+      final totalBytes = response.contentLength;
+      int receivedBytes = 0;
+
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      final sink = tempFile.openWrite();
+
+      await for (final chunk in response) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        if (totalBytes > 0 && onProgress != null) {
+          onProgress(receivedBytes / totalBytes, receivedBytes, totalBytes);
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+
+      // Garante escrita atômica renomeando o temporário
+      if (await destinationFile.exists()) {
+        await destinationFile.delete();
+      }
+      await tempFile.rename(destinationFile.path);
+
+      return destinationFile.path;
+    } finally {
+      client.close();
+    }
+  }
 }
